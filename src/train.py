@@ -11,7 +11,7 @@ from src.model import SequenceCNN
 def train():
 
     dataset = SequenceDataset(
-        "data/raw/mock_data.csv"
+        "data/processed/liver_accessibility.csv"
     )
 
     train_size = int(0.8 * len(dataset))
@@ -36,7 +36,7 @@ def train():
 
     model = SequenceCNN()
 
-    criterion = nn.MSELoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     optimizer = torch.optim.Adam(
         model.parameters(),

@@ -7,6 +7,11 @@ from torch.utils.data import random_split
 from src.datasets import SequenceDataset
 from src.model import SequenceCNN
 
+from sklearn.metrics import (
+    accuracy_score,
+    roc_auc_score
+)
+
 
 def train():
 
@@ -84,11 +89,17 @@ def train():
 
         total_val_loss = 0
 
+        all_predictions = []
+        all_labels = []
+
         with torch.no_grad():
 
             for batch_x, batch_y in val_loader:
-
                 predictions = model(batch_x)
+
+                probabilities = torch.sigmoid(
+                    predictions
+                )
 
                 loss = criterion(
                     predictions,
@@ -97,16 +108,40 @@ def train():
 
                 total_val_loss += loss.item()
 
+                all_predictions.extend(
+                    probabilities.view(-1).tolist()
+                )
+
+                all_labels.extend(
+                    batch_y.view(-1).tolist()
+                )
+
         average_val_loss = (
-            total_val_loss / len(val_loader)
+                total_val_loss / len(val_loader)
+        )
+
+        accuracy = accuracy_score(
+            all_labels,
+            [p > 0.5 for p in all_predictions]
+        )
+
+        roc_auc = roc_auc_score(
+            all_labels,
+            all_predictions
         )
 
         print(
-            f"Epoch {epoch+1} | "
+            f"Epoch {epoch + 1} | "
             f"Train Loss: {average_train_loss:.4f} | "
-            f"Val Loss: {average_val_loss:.4f}"
+            f"Val Loss: {average_val_loss:.4f} | "
+            f"Accuracy: {accuracy:.4f} | "
+            f"ROC-AUC: {roc_auc:.4f}"
         )
 
+    torch.save(
+        model.state_dict(),
+        "./models/liver_accessibility_cnn.pth"
+    )
 
 if __name__ == "__main__":
 

@@ -50,15 +50,18 @@ def train():
         val_indices
     )
 
+    print(f"Train samples: {len(train_dataset)}")
+    print(f"Validation samples: {len(val_dataset)}")
+
     train_loader = DataLoader(
         train_dataset,
-        batch_size=2,
+        batch_size=32,
         shuffle=True
     )
 
     val_loader = DataLoader(
         val_dataset,
-        batch_size=2,
+        batch_size=32,
         shuffle=False
     )
 
@@ -72,6 +75,8 @@ def train():
     )
 
     epochs = 10
+
+    print("Train start.")
 
     for epoch in range(epochs):
 
@@ -165,6 +170,8 @@ def train():
         model.state_dict(),
         "./models/liver_accessibility_cnn.pth"
     )
+
+    print("Model saved.")
 
 if __name__ == "__main__":
 

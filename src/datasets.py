@@ -25,6 +25,7 @@ class SequenceDataset(Dataset):
 
         sequence = row["sequence"]
         label = row["label"]
+        chrom = row["chrom"]
 
         encoded_sequence = one_hot_encode(
             sequence
@@ -40,4 +41,4 @@ class SequenceDataset(Dataset):
             dtype=torch.float32
         )
 
-        return sequence_tensor, label_tensor
+        return sequence_tensor, label_tensor, chrom

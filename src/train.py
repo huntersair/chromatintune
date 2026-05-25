@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from torch.utils.data import DataLoader
-from torch.utils.data import random_split
+from torch.utils.data import Subset
 
 from src.datasets import SequenceDataset
 from src.model import SequenceCNN
@@ -12,19 +12,42 @@ from sklearn.metrics import (
     roc_auc_score
 )
 
-
 def train():
 
     dataset = SequenceDataset(
         "data/processed/liver_accessibility.csv"
     )
 
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
+    train_chroms = [
+        "chr1",
+        "chr2"
+    ]
 
-    train_dataset, val_dataset = random_split(
+    val_chroms = [
+        "chr3"
+    ]
+
+    train_indices = []
+    val_indices = []
+
+    for idx in range(len(dataset)):
+
+        _, _, chrom = dataset[idx]
+
+        if chrom in train_chroms:
+            train_indices.append(idx)
+
+        elif chrom in val_chroms:
+            val_indices.append(idx)
+
+    train_dataset = Subset(
         dataset,
-        [train_size, val_size]
+        train_indices
+    )
+
+    val_dataset = Subset(
+        dataset,
+        val_indices
     )
 
     train_loader = DataLoader(
@@ -60,7 +83,7 @@ def train():
 
         total_train_loss = 0
 
-        for batch_x, batch_y in train_loader:
+        for batch_x, batch_y, _ in train_loader:
 
             predictions = model(batch_x)
 
@@ -94,7 +117,7 @@ def train():
 
         with torch.no_grad():
 
-            for batch_x, batch_y in val_loader:
+            for batch_x, batch_y, _ in val_loader:
                 predictions = model(batch_x)
 
                 probabilities = torch.sigmoid(

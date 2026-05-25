@@ -10,7 +10,7 @@ class SequenceCNN(nn.Module):
         self.conv1 = nn.Conv1d(
             in_channels=4,
             out_channels=32,
-            kernel_size=5
+            kernel_size=11
         )
 
         self.relu = nn.ReLU()

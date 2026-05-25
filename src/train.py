@@ -15,7 +15,7 @@ from sklearn.metrics import (
 def train():
 
     dataset = SequenceDataset(
-        "data/processed/liver_accessibility.csv"
+        "data/processed/liver_accessibility_gc_matched.csv"
     )
 
     train_chroms = [

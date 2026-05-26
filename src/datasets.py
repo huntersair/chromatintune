@@ -20,25 +20,40 @@ class SequenceDataset(Dataset):
         return len(self.dataframe)
 
     def __getitem__(self, idx):
-
         row = self.dataframe.iloc[idx]
 
         sequence = row["sequence"]
+
         label = row["label"]
+
         chrom = row["chrom"]
+
+        h3k27ac = row["h3k27ac"]
 
         encoded_sequence = one_hot_encode(
             sequence
         )
 
-        sequence_tensor = torch.tensor(
+        encoded_sequence = torch.tensor(
             encoded_sequence,
             dtype=torch.float32
-        ).permute(1, 0)
+        )
 
-        label_tensor = torch.tensor(
+        encoded_sequence = encoded_sequence.permute(1, 0)
+
+        label = torch.tensor(
             [label],
             dtype=torch.float32
         )
 
-        return sequence_tensor, label_tensor, chrom
+        h3k27ac = torch.tensor(
+            [h3k27ac],
+            dtype=torch.float32
+        )
+
+        return (
+            encoded_sequence,
+            h3k27ac,
+            label,
+            chrom
+        )

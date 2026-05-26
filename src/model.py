@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 
@@ -17,17 +18,29 @@ class SequenceCNN(nn.Module):
 
         self.pool = nn.AdaptiveMaxPool1d(1)
 
-        self.fc = nn.Linear(32, 1)
+        # 32 CNN features
+        # + 1 H3K27ac feature
+        self.fc = nn.Linear(33, 1)
 
-    def forward(self, x):
+    def forward(
+        self,
+        sequence,
+        h3k27ac
+    ):
 
-        x = self.conv1(x)
+        x = self.conv1(sequence)
 
         x = self.relu(x)
 
         x = self.pool(x)
 
         x = x.squeeze(-1)
+
+        # concatenate epigenomic feature
+        x = torch.cat(
+            [x, h3k27ac],
+            dim=1
+        )
 
         x = self.fc(x)
 

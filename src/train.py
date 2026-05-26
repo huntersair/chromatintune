@@ -15,7 +15,7 @@ from sklearn.metrics import (
 def train():
 
     dataset = SequenceDataset(
-        "data/processed/liver_accessibility_gc_matched.csv"
+        "data/processed/liver_accessibility_multimodal.csv"
     )
 
     train_chroms = [
@@ -32,7 +32,7 @@ def train():
 
     for idx in range(len(dataset)):
 
-        _, _, chrom = dataset[idx]
+        _, _, _, chrom = dataset[idx]
 
         if chrom in train_chroms:
             train_indices.append(idx)
@@ -88,9 +88,12 @@ def train():
 
         total_train_loss = 0
 
-        for batch_x, batch_y, _ in train_loader:
+        for batch_x, batch_h3k27ac, batch_y, _ in train_loader:
 
-            predictions = model(batch_x)
+            predictions = model(
+                batch_x,
+                batch_h3k27ac
+            )
 
             loss = criterion(
                 predictions,
@@ -122,8 +125,12 @@ def train():
 
         with torch.no_grad():
 
-            for batch_x, batch_y, _ in val_loader:
-                predictions = model(batch_x)
+            for batch_x, batch_h3k27ac, batch_y, _ in val_loader:
+
+                predictions = model(
+                    batch_x,
+                    batch_h3k27ac
+                )
 
                 probabilities = torch.sigmoid(
                     predictions

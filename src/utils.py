@@ -16,3 +16,21 @@ def one_hot_encode(sequence: str) -> np.ndarray:
     ]
 
     return np.array(encoding, dtype=np.float32)
+
+def reverse_complement(sequence: str):
+
+    complement = {
+        "A": "T",
+        "T": "A",
+        "C": "G",
+        "G": "C"
+    }
+
+    reversed_sequence = sequence[::-1]
+
+    reverse_complement_sequence = "".join(
+        complement[base]
+        for base in reversed_sequence
+    )
+
+    return reverse_complement_sequence

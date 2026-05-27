@@ -1,14 +1,19 @@
 import torch
 from torch.utils.data import Dataset
-
+from src.utils import reverse_complement
 from src.utils import one_hot_encode
 
 
 class MPRADataset(Dataset):
 
-    def __init__(self, dataframe):
-
+    def __init__(
+            self,
+            dataframe,
+            augment=False
+    ):
         self.dataframe = dataframe
+
+        self.augment = augment
 
     def __len__(self):
 
@@ -19,6 +24,13 @@ class MPRADataset(Dataset):
         row = self.dataframe.iloc[idx]
 
         sequence = row["SEQUENCE"]
+
+        if self.augment:
+
+            if torch.rand(1).item() < 0.5:
+                sequence = reverse_complement(
+                    sequence
+                )
 
         activity = row["HepG2_lfc"]
 

@@ -30,21 +30,31 @@ def train_mpra_regression():
             "./data/processed/mpra_hepg2.csv"
         )
 
-        dataset = MPRADataset(df)
+        full_dataset = MPRADataset(df)
 
         train_size = int(
-            0.8 * len(dataset)
+            0.8 * len(full_dataset)
         )
 
-        val_size = len(dataset) - train_size
+        val_size = len(full_dataset) - train_size
 
         epochs = 25
         batch_size = 32
         learning_rate = 1e-3
 
         train_dataset, val_dataset = random_split(
-            dataset,
+            full_dataset,
             [train_size, val_size]
+        )
+
+        train_dataset = MPRADataset(
+            df.iloc[train_dataset.indices],
+            augment=True
+        )
+
+        val_dataset = MPRADataset(
+            df.iloc[val_dataset.indices],
+            augment=False
         )
 
         train_loader = DataLoader(

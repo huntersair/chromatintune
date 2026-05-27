@@ -188,3 +188,90 @@ class SequenceTransformer(nn.Module):
         x = self.fc(x)
 
         return x
+
+class HybridCNNTransformer(nn.Module):
+
+    def __init__(self):
+
+        super().__init__()
+
+        self.conv1 = nn.Conv1d(
+            in_channels=4,
+            out_channels=64,
+            kernel_size=11,
+            padding=5
+        )
+
+        self.relu = nn.ReLU()
+
+        self.position_embedding = nn.Embedding(
+            200,
+            64
+        )
+
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=64,
+            nhead=4,
+            dropout=0.1,
+            batch_first=True
+        )
+
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer,
+            num_layers=2
+        )
+
+        self.pool = nn.AdaptiveAvgPool1d(1)
+
+        self.dropout = nn.Dropout(0.3)
+
+        self.fc1 = nn.Linear(
+            64,
+            32
+        )
+
+        self.fc2 = nn.Linear(
+            32,
+            1
+        )
+
+    def forward(
+        self,
+        sequence
+    ):
+
+        x = self.conv1(sequence)
+
+        x = self.relu(x)
+
+        # converting to (batch, seq_len, channels)
+
+        x = x.transpose(1, 2)
+
+        positions = torch.arange(
+            0,
+            x.size(1),
+            device=x.device
+        ).unsqueeze(0)
+
+        x = x + self.position_embedding(
+            positions
+        )
+
+        x = self.transformer(x)
+
+        x = x.transpose(1, 2)
+
+        x = self.pool(x)
+
+        x = x.squeeze(-1)
+
+        x = self.dropout(x)
+
+        x = self.fc1(x)
+
+        x = self.relu(x)
+
+        x = self.fc2(x)
+
+        return x

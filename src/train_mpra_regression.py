@@ -16,7 +16,7 @@ import numpy as np
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 
-from src.model import SequenceCNN
+from src.model import DeepSequenceCNN
 from src.mpra_dataset import MPRADataset
 
 def train_mpra_regression():
@@ -58,9 +58,7 @@ def train_mpra_regression():
             batch_size=batch_size
         )
 
-        model = SequenceCNN(
-            use_h3k27ac=False
-        )
+        model = DeepSequenceCNN()
 
         optimizer = torch.optim.Adam(
             model.parameters(),

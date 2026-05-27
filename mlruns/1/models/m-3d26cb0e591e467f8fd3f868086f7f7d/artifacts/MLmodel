@@ -1,0 +1,23 @@
+artifact_path: file:///C:/Users/dwhip/PycharmProjects/chromatintune/mlruns/1/models/m-3d26cb0e591e467f8fd3f868086f7f7d/artifacts
+flavors:
+  python_function:
+    config:
+      device: null
+    data: data
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.pytorch
+    pickle_module_name: mlflow.pytorch.pickle_module
+    python_version: 3.12.3
+  pytorch:
+    code: null
+    model_data: data
+    pytorch_version: 2.12.0+cpu
+mlflow_version: 3.12.0
+model_id: m-3d26cb0e591e467f8fd3f868086f7f7d
+model_size_bytes: 280077
+model_uuid: m-3d26cb0e591e467f8fd3f868086f7f7d
+prompts: null
+run_id: afdf3e483c17413e90af1b13404b893d
+utc_time_created: '2026-05-27 16:30:19.948720'

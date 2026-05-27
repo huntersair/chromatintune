@@ -138,9 +138,15 @@ class SequenceTransformer(nn.Module):
             embedding_dim=64
         )
 
+        self.positional_embedding = nn.Embedding(
+            num_embeddings=200,
+            embedding_dim=64
+        )
+
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=64,
             nhead=4,
+            dropout=0.1,
             batch_first=True
         )
 
@@ -161,7 +167,15 @@ class SequenceTransformer(nn.Module):
         tokens
     ):
 
+        positions = torch.arange(
+            0,
+            tokens.size(1),
+            device=tokens.device
+        ).unsqueeze(0)
+
         x = self.embedding(tokens)
+
+        x = x + self.positional_embedding(positions)
 
         x = self.transformer(x)
 

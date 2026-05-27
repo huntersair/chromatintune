@@ -7,6 +7,13 @@ DNA_VOCAB = {
     "T": [0, 0, 0, 1],
 }
 
+nucleotide_to_index = {
+    "A": 0,
+    "C": 1,
+    "G": 2,
+    "T": 3
+}
+
 def one_hot_encode(sequence: str) -> np.ndarray:
     sequence = sequence.upper()
 
@@ -34,3 +41,12 @@ def reverse_complement(sequence: str):
     )
 
     return reverse_complement_sequence
+
+def tokenize_sequence(sequence):
+
+    tokens = [
+        nucleotide_to_index[base]
+        for base in sequence
+    ]
+
+    return tokens

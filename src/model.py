@@ -126,3 +126,51 @@ class DeepSequenceCNN(nn.Module):
         x = self.fc2(x)
 
         return x
+
+class SequenceTransformer(nn.Module):
+
+    def __init__(self):
+
+        super().__init__()
+
+        self.embedding = nn.Embedding(
+            num_embeddings=4,
+            embedding_dim=64
+        )
+
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=64,
+            nhead=4,
+            batch_first=True
+        )
+
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer,
+            num_layers=2
+        )
+
+        self.pool = nn.AdaptiveAvgPool1d(1)
+
+        self.fc = nn.Linear(
+            64,
+            1
+        )
+
+    def forward(
+        self,
+        tokens
+    ):
+
+        x = self.embedding(tokens)
+
+        x = self.transformer(x)
+
+        x = x.transpose(1, 2)
+
+        x = self.pool(x)
+
+        x = x.squeeze(-1)
+
+        x = self.fc(x)
+
+        return x

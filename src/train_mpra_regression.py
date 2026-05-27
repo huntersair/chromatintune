@@ -38,7 +38,7 @@ def train_mpra_regression():
 
         val_size = len(dataset) - train_size
 
-        epochs = 10
+        epochs = 25
         batch_size = 32
         learning_rate = 1e-3
 
@@ -84,10 +84,14 @@ def train_mpra_regression():
 
         mlflow.log_param(
             "architecture",
-            "single_layer_cnn"
+            "deep_cnn"
         )
 
         print("Train start.")
+
+        best_pearson = 0
+        patience = 5
+        epochs_without_improvement = 0
 
         for epoch in range(epochs):
 
@@ -172,6 +176,33 @@ def train_mpra_regression():
                 f"Spearman: {spearman_corr:.4f}"
             )
 
+            if pearson_corr > best_pearson:
+
+                best_pearson = pearson_corr
+
+                epochs_without_improvement = 0
+
+                torch.save(
+                    model.state_dict(),
+                    "models/best_mpra_model.pth"
+                )
+
+                print(
+                    f"New best model saved "
+                    f"(Pearson={pearson_corr:.4f})"
+                )
+
+            else:
+
+                epochs_without_improvement += 1
+
+            if epochs_without_improvement >= patience:
+                print(
+                    "Early stopping triggered."
+                )
+
+                break
+
             mlflow.log_metric(
                 "train_loss",
                 mean_train_loss,
@@ -195,11 +226,6 @@ def train_mpra_regression():
                 spearman_corr,
                 step=epoch
             )
-
-        torch.save(
-            model.state_dict(),
-            "models/mpra_regression_model.pth"
-        )
 
         mlflow.pytorch.log_model(
             model,

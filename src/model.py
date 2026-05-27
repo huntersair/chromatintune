@@ -4,13 +4,18 @@ import torch.nn as nn
 
 class SequenceCNN(nn.Module):
 
-    def __init__(self):
+    def __init__(
+        self,
+        use_h3k27ac=True
+    ):
 
         super().__init__()
 
+        self.use_h3k27ac = use_h3k27ac
+
         self.conv1 = nn.Conv1d(
             in_channels=4,
-            out_channels=32,
+            out_channels=64,
             kernel_size=11
         )
 
@@ -18,14 +23,24 @@ class SequenceCNN(nn.Module):
 
         self.pool = nn.AdaptiveMaxPool1d(1)
 
-        # 32 CNN features
-        # + 1 H3K27ac feature
-        self.fc = nn.Linear(33, 1)
+        if self.use_h3k27ac:
+
+            self.fc = nn.Linear(
+                65,
+                1
+            )
+
+        else:
+
+            self.fc = nn.Linear(
+                64,
+                1
+            )
 
     def forward(
         self,
         sequence,
-        h3k27ac
+        h3k27ac=None
     ):
 
         x = self.conv1(sequence)
@@ -36,11 +51,12 @@ class SequenceCNN(nn.Module):
 
         x = x.squeeze(-1)
 
-        # concatenate epigenomic feature
-        x = torch.cat(
-            [x, h3k27ac],
-            dim=1
-        )
+        if self.use_h3k27ac:
+
+            x = torch.cat(
+                [x, h3k27ac],
+                dim=1
+            )
 
         x = self.fc(x)
 

@@ -1,11 +1,4 @@
-import numpy as np
-
-DNA_VOCAB = {
-    "A": [1, 0, 0, 0],
-    "C": [0, 1, 0, 0],
-    "G": [0, 0, 1, 0],
-    "T": [0, 0, 0, 1],
-}
+import torch
 
 nucleotide_to_index = {
     "A": 0,
@@ -14,16 +7,24 @@ nucleotide_to_index = {
     "T": 3
 }
 
-def one_hot_encode(sequence: str) -> np.ndarray:
+def one_hot_encode(sequence):
 
-    sequence = sequence.upper()
+    mapping = {
 
-    encoding = [
-        DNA_VOCAB.get(nucleotide, [0, 0, 0, 0])
-        for nucleotide in sequence
-    ]
+        "A": [1,0,0,0],
+        "C": [0,1,0,0],
+        "G": [0,0,1,0],
+        "T": [0,0,0,1],
+        "N": [0,0,0,0]
 
-    return np.array(encoding, dtype=np.float32)
+    }
+
+    encoded = [mapping[base] for base in sequence]
+
+    return torch.tensor(
+        encoded,
+        dtype=torch.float32
+    ).transpose(0, 1)
 
 def reverse_complement(sequence: str):
 

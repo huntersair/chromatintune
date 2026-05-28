@@ -79,15 +79,12 @@ class MultimodalDataset(Dataset):
 
         h3k27ac = row["h3k27ac"]
 
-        tokens = tokenize_sequence(sequence)
-
-        tokens = torch.tensor(
-            tokens,
-            dtype=torch.long
+        sequence_tensor = one_hot_encode(
+            sequence
         )
 
         atac_label = torch.tensor(
-            atac_label,
+            float(atac_label),
             dtype=torch.float32
         )
 
@@ -97,7 +94,7 @@ class MultimodalDataset(Dataset):
         )
 
         return (
-            tokens,
+            sequence_tensor,
             atac_label,
             h3k27ac
         )

@@ -9,32 +9,34 @@ import torch.nn as nn
 
 from torch.utils.data import DataLoader
 from torch.utils.data import random_split
-from tqdm import tqdm
+
 import pandas as pd
 
 from scipy.stats import pearsonr
 
 from sklearn.metrics import roc_auc_score
 
-from src.model import LongContextFlashAttention
+from tqdm import tqdm
+
+from src.model import RegulatoryResNet
 from src.datasets import MultimodalDataset
 
 
-def train_LCFA():
+def train_resnet_inception():
 
     mlflow.set_experiment(
-        "long_context_FlashAttention"
+        "RegulatoryResNet"
     )
 
     with mlflow.start_run():
 
         df = pd.read_csv(
-            "data/processed/50b_liver_accessibility_multimodal_rc.csv"
+            "./data/processed/liver_accessibility_multimodal_rc.csv"
         )
 
-        dataset = MultimodalDataset(df)
-
         print("Dataset loaded")
+
+        dataset = MultimodalDataset(df)
 
         train_size = int(
             0.8 * len(dataset)
@@ -43,21 +45,33 @@ def train_LCFA():
         val_size = len(dataset) - train_size
 
         train_dataset, val_dataset = random_split(
+
             dataset,
+
             [train_size, val_size]
+
         )
 
         train_loader = DataLoader(
+
             train_dataset,
-            batch_size=4,
+
+            batch_size=32,
+
             shuffle=True,
+
             num_workers=0
+
         )
 
         val_loader = DataLoader(
+
             val_dataset,
-            batch_size=4,
+
+            batch_size=32,
+
             num_workers=0
+
         )
 
         print("Dataloaders created")
@@ -68,12 +82,16 @@ def train_LCFA():
             else "cpu"
         )
 
-        model = LongContextFlashAttention().to(device)
+        print(f"Device: {device}")
+
+        model = RegulatoryResNet().to(
+            device
+        )
 
         optimizer = torch.optim.AdamW(
             model.parameters(),
-            lr=1e-4,
-            weight_decay=1e-2
+            lr=1e-3,
+            weight_decay=1e-4
         )
 
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -96,7 +114,6 @@ def train_LCFA():
         patience_counter = 0
 
         print("Train start.")
-        print(f"Device: {device}")
 
         for epoch in range(epochs):
 
@@ -104,20 +121,28 @@ def train_LCFA():
 
             train_loss = 0
 
-            for (
-                    tokens,
-                    atac_labels,
-                    h3k27ac_targets
-            ) in tqdm(
+            train_bar = tqdm(
                 train_loader,
-                desc=f"Epoch {epoch + 1}"
-            ):
+                desc=f"Epoch {epoch+1}"
+            )
 
-                tokens = tokens.to(device)
+            for (
+                sequences,
+                atac_labels,
+                h3k27ac_targets
+            ) in train_bar:
 
-                atac_labels = atac_labels.to(device)
+                sequences = sequences.to(
+                    device
+                )
 
-                h3k27ac_targets = h3k27ac_targets.to(device)
+                atac_labels = atac_labels.to(
+                    device
+                )
+
+                h3k27ac_targets = h3k27ac_targets.to(
+                    device
+                )
 
                 optimizer.zero_grad()
 
@@ -125,11 +150,11 @@ def train_LCFA():
                     atac_logits,
                     h3k27ac_output,
                     embeddings
-                ) = model(tokens)
+                ) = model(sequences)
 
-                atac_logits = atac_logits.squeeze()
+                atac_logits = atac_logits.squeeze(-1)
 
-                h3k27ac_output = h3k27ac_output.squeeze()
+                h3k27ac_output = h3k27ac_output.squeeze(-1)
 
                 atac_loss = atac_criterion(
                     atac_logits,
@@ -172,22 +197,28 @@ def train_LCFA():
             with torch.no_grad():
 
                 for (
-                    tokens,
+                    sequences,
                     atac_labels,
                     h3k27ac_targets
                 ) in val_loader:
 
-                    tokens = tokens.to(device)
+                    sequences = sequences.to(
+                        device
+                    )
 
-                    atac_labels = atac_labels.to(device)
+                    atac_labels = atac_labels.to(
+                        device
+                    )
 
-                    h3k27ac_targets = h3k27ac_targets.to(device)
+                    h3k27ac_targets = h3k27ac_targets.to(
+                        device
+                    )
 
                     (
                         atac_logits,
                         h3k27ac_output,
                         embeddings
-                    ) = model(tokens)
+                    ) = model(sequences)
 
                     atac_logits = atac_logits.squeeze(-1)
 
@@ -240,14 +271,18 @@ def train_LCFA():
                 all_h3k27ac_targets
             )
 
-            scheduler.step(val_auc)
+            scheduler.step(
+                val_auc
+            )
 
             avg_train_loss = (
-                train_loss / len(train_loader)
+                train_loss
+                / len(train_loader)
             )
 
             avg_val_loss = (
-                val_loss / len(val_loader)
+                val_loss
+                / len(val_loader)
             )
 
             print(
@@ -291,7 +326,7 @@ def train_LCFA():
 
                 torch.save(
                     model.state_dict(),
-                    "models/best_flash_multitask_model.pth"
+                    "models/best_regulatory_resnet.pth"
                 )
 
                 print(
@@ -313,10 +348,9 @@ def train_LCFA():
 
         mlflow.pytorch.log_model(
             model,
-            "flash_multitask_model"
+            "regulatory_resnet"
         )
-
 
 if __name__ == "__main__":
 
-    train_LCFA()
+    train_resnet_inception()

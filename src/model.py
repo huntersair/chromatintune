@@ -527,23 +527,23 @@ class LongContextFlashAttention(nn.Module):
 
         self.embedding = nn.Embedding(
             num_embeddings=5,
-            embedding_dim=128
+            embedding_dim=32
         )
 
         self.cls_token = nn.Parameter(
-            torch.randn(1, 1, 128)
+            torch.randn(1, 1, 32)
         )
 
         self.positional_embedding = nn.Embedding(
-            1001,
-            128
+            51,
+            32
         )
 
         self.blocks = nn.ModuleList([
 
             FlashAttentionBlock(
-                embed_dim=128,
-                num_heads=8,
+                embed_dim=32,
+                num_heads=4,
                 dropout=0.1
             )
 
@@ -552,12 +552,12 @@ class LongContextFlashAttention(nn.Module):
         ])
 
         self.layernorm = nn.LayerNorm(
-            128
+            32
         )
 
         self.shared_mlp = nn.Sequential(
 
-            nn.Linear(128, 64),
+            nn.Linear(32, 16),
 
             nn.GELU(),
 
@@ -566,12 +566,12 @@ class LongContextFlashAttention(nn.Module):
         )
 
         self.atac_head = nn.Linear(
-            64,
+            16,
             1
         )
 
         self.h3k27ac_head = nn.Linear(
-            64,
+            16,
             1
         )
 
@@ -631,4 +631,407 @@ class LongContextFlashAttention(nn.Module):
             atac_logits,
             h3k27ac_output,
             raw_cls_embedding
+        )
+
+class InceptionResidualBlock(nn.Module):
+
+    def __init__(
+        self,
+        in_channels,
+        out_channels
+    ):
+
+        super().__init__()
+
+        branch_channels = out_channels // 4
+
+        # (3x3conv)
+
+        self.branch3 = nn.Sequential(
+
+            nn.Conv1d(
+                in_channels,
+                branch_channels,
+                kernel_size=1
+            ),
+
+            nn.BatchNorm1d(
+                branch_channels
+            ),
+
+            nn.GELU(),
+
+            nn.Conv1d(
+                branch_channels,
+                branch_channels,
+                kernel_size=3,
+                padding=1
+            ),
+
+            nn.BatchNorm1d(
+                branch_channels
+            ),
+
+            nn.GELU()
+
+        )
+
+        # (5x5 conv)
+
+        self.branch5 = nn.Sequential(
+
+            nn.Conv1d(
+                in_channels,
+                branch_channels,
+                kernel_size=1
+            ),
+
+            nn.BatchNorm1d(
+                branch_channels
+            ),
+
+            nn.GELU(),
+
+            nn.Conv1d(
+                branch_channels,
+                branch_channels,
+                kernel_size=5,
+                padding=2
+            ),
+
+            nn.BatchNorm1d(
+                branch_channels
+            ),
+
+            nn.GELU()
+
+        )
+
+        # 9x9 conv
+
+        self.branch9 = nn.Sequential(
+
+            nn.Conv1d(
+                in_channels,
+                branch_channels,
+                kernel_size=1
+            ),
+
+            nn.BatchNorm1d(
+                branch_channels
+            ),
+
+            nn.GELU(),
+
+            nn.Conv1d(
+                branch_channels,
+                branch_channels,
+                kernel_size=9,
+                padding=4
+            ),
+
+            nn.BatchNorm1d(
+                branch_channels
+            ),
+
+            nn.GELU()
+
+        )
+
+        # Pooling branch
+
+        self.pool_branch = nn.Sequential(
+
+            nn.MaxPool1d(
+                kernel_size=3,
+                stride=1,
+                padding=1
+            ),
+
+            nn.Conv1d(
+                in_channels,
+                branch_channels,
+                kernel_size=1
+            ),
+
+            nn.BatchNorm1d(
+                branch_channels
+            ),
+
+            nn.GELU()
+
+        )
+
+        self.projection = nn.Sequential(
+
+            nn.Conv1d(
+                out_channels,
+                out_channels,
+                kernel_size=1
+            ),
+
+            nn.BatchNorm1d(
+                out_channels
+            )
+
+        )
+
+        if in_channels != out_channels:
+
+            self.residual_projection = nn.Conv1d(
+                in_channels,
+                out_channels,
+                kernel_size=1
+            )
+
+        else:
+
+            self.residual_projection = nn.Identity()
+
+        self.final_activation = nn.GELU()
+
+    def forward(
+        self,
+        x
+    ):
+
+        residual = self.residual_projection(
+            x
+        )
+
+        branch3 = self.branch3(x)
+
+        branch5 = self.branch5(x)
+
+        branch9 = self.branch9(x)
+
+        pool_branch = self.pool_branch(x)
+
+        out = torch.cat(
+
+            [
+                branch3,
+                branch5,
+                branch9,
+                pool_branch
+            ],
+
+            dim=1
+
+        )
+
+        out = self.projection(
+            out
+        )
+
+        out = out + residual
+
+        out = self.final_activation(
+            out
+        )
+
+        return out
+
+class DilatedResidualBlock(nn.Module):
+
+    def __init__(
+        self,
+        channels,
+        dilation=2,
+        dropout=0.1
+    ):
+
+        super().__init__()
+
+        padding = dilation
+
+        self.block = nn.Sequential(
+
+            nn.Conv1d(
+                channels,
+                channels,
+                kernel_size=3,
+                padding=padding,
+                dilation=dilation
+            ),
+
+            nn.BatchNorm1d(
+                channels
+            ),
+
+            nn.GELU(),
+
+            nn.Dropout(
+                dropout
+            ),
+
+            nn.Conv1d(
+                channels,
+                channels,
+                kernel_size=3,
+                padding=padding,
+                dilation=dilation
+            ),
+
+            nn.BatchNorm1d(
+                channels
+            )
+
+        )
+
+        self.final_activation = nn.GELU()
+
+    def forward(
+        self,
+        x
+    ):
+
+        residual = x
+
+        out = self.block(
+            x
+        )
+
+        out = out + residual
+
+        out = self.final_activation(
+            out
+        )
+
+        return out
+
+class RegulatoryResNet(nn.Module):
+
+    def __init__(self):
+
+        super().__init__()
+
+        self.stem = nn.Sequential(
+
+            nn.Conv1d(
+                in_channels=4,
+                out_channels=64,
+                kernel_size=7,
+                padding=3
+            ),
+
+            nn.BatchNorm1d(
+                64
+            ),
+
+            nn.GELU()
+
+        )
+
+        self.inception_blocks = nn.Sequential(
+
+            InceptionResidualBlock(
+                in_channels=64,
+                out_channels=64
+            ),
+
+            InceptionResidualBlock(
+                in_channels=64,
+                out_channels=64
+            ),
+
+            InceptionResidualBlock(
+                in_channels=64,
+                out_channels=64
+            )
+
+        )
+
+        self.dilated_blocks = nn.Sequential(
+
+            DilatedResidualBlock(
+                channels=64,
+                dilation=2
+            ),
+
+            DilatedResidualBlock(
+                channels=64,
+                dilation=4
+            ),
+
+            DilatedResidualBlock(
+                channels=64,
+                dilation=8
+            )
+
+        )
+
+        self.global_pool = nn.AdaptiveAvgPool1d(
+            1
+        )
+
+        self.shared_mlp = nn.Sequential(
+
+            nn.Linear(
+                64,
+                128
+            ),
+
+            nn.GELU(),
+
+            nn.Dropout(
+                0.2
+            )
+
+        )
+
+        self.atac_head = nn.Linear(
+            128,
+            1
+        )
+
+        self.h3k27ac_head = nn.Linear(
+            128,
+            1
+        )
+
+    def forward(
+        self,
+        x
+    ):
+
+        x = self.stem(
+            x
+        )
+
+        x = self.inception_blocks(
+            x
+        )
+
+        x = self.dilated_blocks(
+            x
+        )
+
+        x = self.global_pool(
+            x
+        )
+
+        x = x.squeeze(-1)
+
+        shared_embedding = self.shared_mlp(
+            x
+        )
+
+
+        atac_logits = self.atac_head(
+            shared_embedding
+        )
+
+        h3k27ac_output = self.h3k27ac_head(
+            shared_embedding
+        )
+
+        return (
+
+            atac_logits,
+
+            h3k27ac_output,
+
+            shared_embedding
+
         )

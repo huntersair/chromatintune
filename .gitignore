@@ -1,0 +1,18 @@
+# MLflow
+mlruns/
+
+# Models
+models/
+
+# Processed data
+data/processed/
+
+# Reference genomes
+data/reference/
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/

@@ -15,6 +15,7 @@ nucleotide_to_index = {
 }
 
 def one_hot_encode(sequence: str) -> np.ndarray:
+
     sequence = sequence.upper()
 
     encoding = [
@@ -26,27 +27,38 @@ def one_hot_encode(sequence: str) -> np.ndarray:
 
 def reverse_complement(sequence: str):
 
+    sequence = sequence.upper()
+
     complement = {
         "A": "T",
         "T": "A",
         "C": "G",
-        "G": "C"
+        "G": "C",
+        "N": "N"
     }
 
     reversed_sequence = sequence[::-1]
 
     reverse_complement_sequence = "".join(
-        complement[base]
+        complement.get(base, "N")
         for base in reversed_sequence
     )
 
     return reverse_complement_sequence
 
-def tokenize_sequence(sequence):
+def tokenize_sequence(sequence: str):
 
-    tokens = [
-        nucleotide_to_index[base]
+    token_map = {
+        "A": 0,
+        "C": 1,
+        "G": 2,
+        "T": 3,
+        "N": 4
+    }
+
+    sequence = sequence.upper()
+
+    return [
+        token_map.get(base, 4)
         for base in sequence
     ]
-
-    return tokens

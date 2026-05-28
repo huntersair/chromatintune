@@ -106,10 +106,6 @@ def train():
 
         for epoch in range(epochs):
 
-            # -------------------
-            # TRAINING
-            # -------------------
-
             model.train()
 
             total_train_loss = 0
@@ -137,10 +133,6 @@ def train():
             average_train_loss = (
                 total_train_loss / len(train_loader)
             )
-
-            # -------------------
-            # VALIDATION
-            # -------------------
 
             model.eval()
 

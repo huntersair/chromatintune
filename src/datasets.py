@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import Dataset
 
 from src.utils import one_hot_encode
+from src.utils import tokenize_sequence
 
 
 class SequenceDataset(Dataset):
@@ -56,4 +57,47 @@ class SequenceDataset(Dataset):
             h3k27ac,
             label,
             chrom
+        )
+
+class MultimodalDataset(Dataset):
+
+    def __init__(self, dataframe):
+
+        self.dataframe = dataframe
+
+    def __len__(self):
+
+        return len(self.dataframe)
+
+    def __getitem__(self, idx):
+
+        row = self.dataframe.iloc[idx]
+
+        sequence = row["sequence"]
+
+        atac_label = row["label"]
+
+        h3k27ac = row["h3k27ac"]
+
+        tokens = tokenize_sequence(sequence)
+
+        tokens = torch.tensor(
+            tokens,
+            dtype=torch.long
+        )
+
+        atac_label = torch.tensor(
+            atac_label,
+            dtype=torch.float32
+        )
+
+        h3k27ac = torch.tensor(
+            h3k27ac,
+            dtype=torch.float32
+        )
+
+        return (
+            tokens,
+            atac_label,
+            h3k27ac
         )

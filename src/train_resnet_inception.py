@@ -4,6 +4,9 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import mlflow
 
+import numpy as np
+import random
+
 import torch
 import torch.nn as nn
 
@@ -22,11 +25,24 @@ from src.model import RegulatoryResNet
 from src.datasets import MultimodalDataset
 
 
-def train_resnet_inception():
+def train_model(
+    lr,
+    weight_decay,
+    dropout,
+    se_reduction,
+    lambda_h3k27ac,
+    train_fraction=0.3,
+    epochs=5,
+    save_model=True
+):
 
     mlflow.set_experiment(
         "RegulatoryResNet"
     )
+
+    torch.manual_seed(42)
+    np.random.seed(42)
+    random.seed(42)
 
     with mlflow.start_run():
 
@@ -38,18 +54,31 @@ def train_resnet_inception():
 
         dataset = MultimodalDataset(df)
 
+        if train_fraction < 1.0:
+            subset_size = int(
+                len(dataset) * train_fraction
+            )
+
+            dataset, _ = random_split(
+                dataset,
+                [
+                    subset_size,
+                    len(dataset) - subset_size
+                ]
+            )
+
         train_size = int(
             0.8 * len(dataset)
         )
 
         val_size = len(dataset) - train_size
 
+        generator = torch.Generator().manual_seed(42)
+
         train_dataset, val_dataset = random_split(
-
             dataset,
-
-            [train_size, val_size]
-
+            [train_size, val_size],
+            generator=generator
         )
 
         train_loader = DataLoader(
@@ -76,6 +105,9 @@ def train_resnet_inception():
 
         print("Dataloaders created")
 
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(42)
+
         device = torch.device(
             "cuda"
             if torch.cuda.is_available()
@@ -84,14 +116,15 @@ def train_resnet_inception():
 
         print(f"Device: {device}")
 
-        model = RegulatoryResNet().to(
-            device
-        )
+        model = RegulatoryResNet(
+            dropout=dropout,
+            se_reduction=se_reduction
+        ).to(device)
 
         optimizer = torch.optim.AdamW(
             model.parameters(),
-            lr=1e-3,
-            weight_decay=1e-4
+            lr=lr,
+            weight_decay=weight_decay
         )
 
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -105,9 +138,11 @@ def train_resnet_inception():
 
         h3k27ac_criterion = nn.MSELoss()
 
-        epochs = 25
-
         best_auc = 0
+
+        best_pearson = -1
+
+        best_score = -float("inf")
 
         patience = 5
 
@@ -167,8 +202,8 @@ def train_resnet_inception():
                 )
 
                 total_loss = (
-                    atac_loss
-                    + h3k27ac_loss
+                        atac_loss
+                        + lambda_h3k27ac * h3k27ac_loss
                 )
 
                 total_loss.backward()
@@ -235,8 +270,8 @@ def train_resnet_inception():
                     )
 
                     total_loss = (
-                        atac_loss
-                        + h3k27ac_loss
+                            atac_loss
+                            + lambda_h3k27ac * h3k27ac_loss
                     )
 
                     val_loss += total_loss.item()
@@ -318,16 +353,28 @@ def train_resnet_inception():
                 step=epoch
             )
 
-            if val_auc > best_auc:
+            current_score = (
+                                    (val_auc / 0.9636)
+                                    +
+                                    (h3k27ac_pearson / 0.4339)
+                            ) / 2
+
+            if current_score > best_score:
+
+                best_score = current_score
 
                 best_auc = val_auc
 
+                best_pearson = h3k27ac_pearson
+
                 patience_counter = 0
 
-                torch.save(
-                    model.state_dict(),
-                    "models/best_regulatory_resnet.pth"
-                )
+                if save_model:
+
+                    torch.save(
+                        model.state_dict(),
+                        "models/bayesopt_regulatory_resnet.pth"
+                    )
 
                 print(
                     f"New best model saved "
@@ -351,6 +398,19 @@ def train_resnet_inception():
             "regulatory_resnet"
         )
 
+    return (
+        best_auc,
+        best_pearson
+    )
+
 if __name__ == "__main__":
 
-    train_resnet_inception()
+    train_model(
+        lr=1e-3,
+        weight_decay=1e-4,
+        dropout=0.2,
+        se_reduction=16,
+        lambda_h3k27ac=2.0,
+        train_fraction=1.0,
+        epochs=25
+    )

@@ -638,7 +638,8 @@ class InceptionResidualBlock(nn.Module):
     def __init__(
         self,
         in_channels,
-        out_channels
+        out_channels,
+        se_reduction = 16
     ):
 
         super().__init__()
@@ -646,7 +647,8 @@ class InceptionResidualBlock(nn.Module):
         branch_channels = out_channels // 4
 
         self.se = SEBlock(
-            out_channels
+            out_channels,
+            reduction=se_reduction
         )
 
         # (3x3conv)
@@ -910,7 +912,7 @@ class DilatedResidualBlock(nn.Module):
 
 class RegulatoryResNet(nn.Module):
 
-    def __init__(self):
+    def __init__(self, dropout, se_reduction):
 
         super().__init__()
 
@@ -935,17 +937,20 @@ class RegulatoryResNet(nn.Module):
 
             InceptionResidualBlock(
                 in_channels=64,
-                out_channels=64
+                out_channels=64,
+                se_reduction=se_reduction
             ),
 
             InceptionResidualBlock(
                 in_channels=64,
-                out_channels=64
+                out_channels=64,
+                se_reduction=se_reduction
             ),
 
             InceptionResidualBlock(
                 in_channels=64,
-                out_channels=64
+                out_channels=64,
+                se_reduction=se_reduction
             )
 
         )
@@ -983,7 +988,7 @@ class RegulatoryResNet(nn.Module):
             nn.GELU(),
 
             nn.Dropout(
-                0.2
+                dropout
             )
 
         )

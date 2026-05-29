@@ -645,6 +645,10 @@ class InceptionResidualBlock(nn.Module):
 
         branch_channels = out_channels // 4
 
+        self.se = SEBlock(
+            out_channels
+        )
+
         # (3x3conv)
 
         self.branch3 = nn.Sequential(
@@ -821,6 +825,10 @@ class InceptionResidualBlock(nn.Module):
         )
 
         out = self.projection(
+            out
+        )
+
+        out = self.se(
             out
         )
 
@@ -1027,11 +1035,67 @@ class RegulatoryResNet(nn.Module):
         )
 
         return (
-
             atac_logits,
-
             h3k27ac_output,
-
             shared_embedding
+        )
+
+class SEBlock(nn.Module):
+
+    def __init__(
+        self,
+        channels,
+        reduction=16
+    ):
+
+        super().__init__()
+
+        self.squeeze = nn.AdaptiveAvgPool1d(
+            1
+        )
+
+        self.excitation = nn.Sequential(
+
+            nn.Linear(
+                channels,
+                channels // reduction
+            ),
+
+            nn.GELU(),
+
+            nn.Linear(
+                channels // reduction,
+                channels
+            ),
+
+            nn.Sigmoid()
 
         )
+
+    def forward(
+        self,
+        x
+    ):
+
+        batch_size, channels, _ = x.shape
+
+        weights = self.squeeze(
+            x
+        )
+
+        weights = weights.view(
+            batch_size,
+            channels
+        )
+
+        weights = self.excitation(
+            weights
+        )
+
+        weights = weights.view(
+            batch_size,
+            channels,
+            1
+        )
+
+        return x * weights

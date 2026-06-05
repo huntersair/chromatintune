@@ -31,7 +31,7 @@ def train_model(
     dropout,
     se_reduction,
     lambda_h3k27ac,
-    train_fraction=0.3,
+    train_fraction=1.0,
     epochs=5,
     save_model=True
 ):
@@ -131,7 +131,7 @@ def train_model(
             optimizer,
             mode="max",
             factor=0.5,
-            patience=3
+            patience=2
         )
 
         atac_criterion = nn.BCEWithLogitsLoss()
@@ -144,7 +144,7 @@ def train_model(
 
         best_score = -float("inf")
 
-        patience = 5
+        patience = 8
 
         patience_counter = 0
 
@@ -306,10 +306,6 @@ def train_model(
                 all_h3k27ac_targets
             )
 
-            scheduler.step(
-                val_auc
-            )
-
             avg_train_loss = (
                 train_loss
                 / len(train_loader)
@@ -320,8 +316,11 @@ def train_model(
                 / len(val_loader)
             )
 
+            current_lr = optimizer.param_groups[0]["lr"]
+
             print(
                 f"Epoch {epoch+1} | "
+                f"Learning rate {current_lr:.6f} |"
                 f"Train Loss: {avg_train_loss:.4f} | "
                 f"Val Loss: {avg_val_loss:.4f} | "
                 f"ATAC AUROC: {val_auc:.4f} | "
@@ -354,10 +353,31 @@ def train_model(
             )
 
             current_score = (
-                                    (val_auc / 0.9636)
-                                    +
-                                    (h3k27ac_pearson / 0.4339)
-                            ) / 2
+                    val_auc
+                    +
+                    h3k27ac_pearson
+            ) / 2
+
+            mlflow.log_metric(
+                "Score",
+                current_score,
+                step=epoch
+            )
+
+            old_lr = optimizer.param_groups[0]["lr"]
+
+            scheduler.step(
+                current_score
+            )
+
+            new_lr = optimizer.param_groups[0]["lr"]
+
+            if new_lr != old_lr:
+
+                print(
+                    f"Learning rate reduced: "
+                    f"{old_lr:.6f} -> {new_lr:.6f}"
+                )
 
             if current_score > best_score:
 
@@ -376,10 +396,10 @@ def train_model(
                         "models/bayesopt_regulatory_resnet.pth"
                     )
 
-                print(
-                    f"New best model saved "
-                    f"(AUROC={val_auc:.4f})"
-                )
+                    print(
+                        f"New best model saved "
+                        f"(best score so far = {best_score:.4f})"
+                    )
 
             else:
 
@@ -405,12 +425,15 @@ def train_model(
 
 if __name__ == "__main__":
 
-    train_model(
-        lr=1e-3,
-        weight_decay=1e-4,
-        dropout=0.2,
-        se_reduction=16,
-        lambda_h3k27ac=2.0,
-        train_fraction=1.0,
-        epochs=25
-    )
+    BEST_CONFIG = {
+        "lr": 0.0015,
+        "weight_decay": 1e-4,
+        "dropout": 0.0,
+        "se_reduction": 16,
+        "lambda_h3k27ac": 1.0,
+        "train_fraction": 1.0,
+        "epochs": 50,
+        "save_model": True
+    }
+
+    train_model(**BEST_CONFIG)

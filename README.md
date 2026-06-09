@@ -153,6 +153,8 @@ Training was performed using:
 
 For every experiment, hyperparameters, metrics, model checkpoints, and generated figures were logged through MLflow.
 
+The model was trained only on ATAC-seq and H3K27ac targets. MPRA activity was used exclusively for post-hoc interpretation of the learned embedding space.
+
 ## Architecture Experiments
 
 Several architectural variants were evaluated during development.

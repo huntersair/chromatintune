@@ -88,7 +88,8 @@ In the model, this implemented as Conv1D (kernel size: 7, padding: 3) layer foll
 
 <p align="center">
   <img src="figures/inception_res_module.png" alt="inception-res" width="700"><br>
-  <em>Inception-Residual Block Structure.</em>
+  <em>Inception-Residual Block Structure. 
+    <br>Resid(X) refers to X itself when the SE block's output shape is the same as X (the default case for RegulatoryResNet), or a 1x1 convolution which augments X to match the shape of the SE block's output.</em>
 </p>
 
 #### Three Inception-style residual blocks operate in parallel using multiple receptive fields:
@@ -206,6 +207,8 @@ Several embedding dimensions showed strong correlation with regulatory activity,
 | MPRA Activity | 4.18 | 0.13 |
 | ATAC | 6.51 | -3.99 |
 | H3K27ac | 0.40 | -0.46 |
+
+(The high and low columns refer to the top 20 sequences which provided the highest/lowest enrichment for the latent dimension, their correlations with the metric are then averaged.)
 
 <p align="center">
   <img src="figures/correlation_plot.png" alt="corr-plot" width="500"><br>
